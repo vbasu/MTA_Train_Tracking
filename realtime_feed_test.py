@@ -15,8 +15,8 @@ feed.ParseFromString(res.content)
 #         print(entity.trip_update)
 #         print("-----------\n")
 
-message_array = MessageToDict(feed).get('entity')
-message_array = list(filter(lambda x: 'tripUpdate' in x, message_array))
+message_array_all = MessageToDict(feed).get('entity')
+message_array = list(filter(lambda x: 'tripUpdate' in x, message_array_all))
 
 df = pd.read_csv('Data/google_transit/stops.txt')
 stop_lookup_dict = df.set_index('stop_id')['stop_name'].to_dict()
