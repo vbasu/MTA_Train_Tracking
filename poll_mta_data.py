@@ -1,9 +1,11 @@
+import pandas
+
 from constants import *
 import requests
 from google.transit import gtfs_realtime_pb2
 from google.protobuf.json_format import MessageToDict
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import reduce
 import time
 import glob
@@ -39,7 +41,7 @@ def parse_trip_update(trip_updates, update_time):
             continue
         for stop_time_update in stop_time_updates:
             stop_id = stop_time_update.get('stopId')
-            stop_name = stop_lookup_dict.get(stop_id)
+            stop_name = STOP_LOOKUP_DICT.get(stop_id)
 
             stop_update_info_all = {'trip_id': trip_id,
                                     'trip_date': trip_date,
@@ -76,9 +78,74 @@ def poll_and_update():
         'Data/train_timing_data/{}/train_data_{}.csv'.format(date, time), index=False)
 
 
+def get_single_snap(station=None):
+    df = pd.DataFrame(columns=['trip_id',
+                               'line',
+                               'stop_id',
+                               'stop_name',
+                               'arrival_time',
+                               'departure_time',
+                               'trip_date',
+                               'update_time'
+                               ])
+
+    raw_trip_updates, data_update_time = poll_trip_updates()
+    message_data = parse_trip_update(raw_trip_updates, data_update_time)
+    df = pd.concat([df, pd.DataFrame(data=message_data)], ignore_index=True)
+
+    current_time = datetime.now()
+    cutoff_time = current_time + timedelta(0, 600)
+    if station is None:
+        return df
+    df = df.query("stop_name==@station and arrival_time>@current_time and arrival_time<@cutoff_time")
+    return df
+
+
+def get_all_stations():
+    df = get_single_snap(station=None)
+    return list(df['stop_name'].unique())
+
+
+def display_df(df: pandas.DataFrame):
+    # df = df[['line', 'departure_time']].groupby('line').agg('min')
+
+    df = df[['line', 'departure_time']].set_index('line')
+
+    # styled_df = df.style \
+    #     .set_table_styles([
+    #     {'selector': 'table',
+    #      'props': [('border-collapse', 'collapse')]},
+    #     {'selector': 'th, td',
+    #      'props': [('border', '1px solid black'),
+    #                ('padding', '8px')]}]) \
+    #     .set_properties(**{'text-align': 'center'}) \
+    #     .set_caption('Sample DataFrame')
+    # return styled_df.render()
+    return df.to_html()
+
+
+
+
 if __name__ == '__main__':
 
-    stop_id_to_name = pd.read_csv('Data/google_transit/stops.txt')
-    stop_lookup_dict = stop_id_to_name.set_index('stop_id')['stop_name'].to_dict()
+    # poll_and_update()
+    # df = pd.DataFrame(columns=['trip_id',
+    #                            'line',
+    #                            'stop_id',
+    #                            'stop_name',
+    #                            'arrival_time',
+    #                            'departure_time',
+    #                            'trip_date',
+    #                            'update_time'
+    #                            ])
+    #
+    # raw_trip_updates, data_update_time = poll_trip_updates()
+    # message_data = parse_trip_update(raw_trip_updates, data_update_time)
+    # df = pd.concat([df, pd.DataFrame(data=message_data)], ignore_index=True)
 
-    poll_and_update()
+    test_df = get_single_snap()
+    test_df = test_df[['line', 'stop_name', 'departure_time']]
+    #test_df['departure_time'] = pd.to_datetime(test_df['departure_time'], format='%H:%M:%s')
+    test = list(get_all_stations())
+    print('hello')
+
