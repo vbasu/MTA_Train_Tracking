@@ -1,5 +1,3 @@
-import pandas
-
 from constants import *
 import requests
 from google.transit import gtfs_realtime_pb2
@@ -106,7 +104,7 @@ def get_all_stations():
     return list(df['stop_name'].unique())
 
 
-def display_df(df: pandas.DataFrame):
+def display_df(df: pd.DataFrame):
     # df = df[['line', 'departure_time']].groupby('line').agg('min')
 
     df = df[['line', 'departure_time']].set_index('line')
@@ -122,8 +120,6 @@ def display_df(df: pandas.DataFrame):
     #     .set_caption('Sample DataFrame')
     # return styled_df.render()
     return df.to_html()
-
-
 
 
 if __name__ == '__main__':
